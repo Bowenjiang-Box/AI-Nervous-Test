@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI焦虑等级测试 - 2026版</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app { width: 90%; max-width: 500px; padding: 20px; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            width: 100%; height: 6px; background: #334155;
+            border-radius: 10px; margin-bottom: 30px;
+        }
+        #progress-bar {
+            width: 0%; height: 100%; background: var(--accent-color);
+            transition: width 0.3s ease; border-radius: 10px;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        /* 题目 */
+        #question-category { font-size: 0.75rem; color: var(--accent-color); letter-spacing: 2px; margin-bottom: 10px; }
+        h2 { font-size: 1.3rem; line-height: 1.6; margin-bottom: 25px; min-height: 80px; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
+            padding: 16px; border-radius: 14px; cursor: pointer;
+            text-align: left; transition: 0.2s; font-size: 0.95rem;
+        }
+        .option-btn:hover { background: rgba(56, 189, 248, 0.1); border-color: var(--accent-color); transform: translateX(5px); }
+
+        /* 结果展示区 */
+        .score-display {
+            font-size: 4rem; font-weight: 900; margin: 10px 0;
+            transition: color 0.5s ease;
+        }
+        .percentage-label { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 5px; }
+        .result-title { font-size: 1.8rem; margin-bottom: 15px; }
+        .result-desc { font-size: 0.95rem; color: var(--text-muted); line-height: 1.7; text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; }
+
+        .restart-btn {
+            background: var(--text-main); color: var(--bg-color);
+            border: none; padding: 12px 40px; border-radius: 50px;
+            font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.3s;
+        }
+        .restart-btn:hover { transform: scale(1.05); background: var(--accent-color); }
+
+        .hidden { display: none; }
+        .fade { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="start-page" class="card">
+        <div style="font-size: 3rem; margin-bottom: 20px;">🤖</div>
+        <h1>AI焦虑等级测试</h1>
+        <p style="color: var(--text-muted); margin-bottom: 30px;">24个真实生活场景，测测你被算法“入侵”了多少？</p>
+        <button class="restart-btn" onclick="startTest()">开始测试</button>
+    </div>
+
+    <div id="quiz-page" class="card hidden">
+        <div class="progress-container"><div id="progress-bar"></div></div>
+        <div id="quiz-content" class="fade">
+            <div id="question-category"></div>
+            <h2 id="question-text">加载中...</h2>
+            <div class="options" id="options-container"></div>
+        </div>
+    </div>
+
+    <div id="result-page" class="card hidden">
+        <div class="percentage-label">焦虑指数</div>
+        <div id="score-num" class="score-display">0%</div>
+        <h2 id="res-level" class="result-title">级别加载中</h2>
+        <p id="res-desc" class="result-desc"></p>
+        <button class="restart-btn" onclick="location.reload()">重新测试</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { cat: "信息真伪", q: "刷到极逼真的社会新闻视频，评论区都在吵是不是AI生成的：", a: ["不纠结真假，有趣就行", "反复观察画面细节试图找破绽", "感到虚无，觉得互联网已没真相"], p: [0, 2, 5] },
+        { cat: "信息真伪", q: "看到精美的旅游风景照，发现是AI合成的：", a: ["挺好，审美进化了", "觉得受骗，再也不信网图", "担心现实美景不再能打动自己"], p: [0, 2, 5] },
+        { cat: "信息真伪", q: "读到逻辑极强的深度好文，末尾标注“由AI辅助创作”：", a: ["有启发就行，谁写的无所谓", "心理落差大，觉得作者偷懒", "怀疑人类思考能力正在萎缩"], p: [0, 2, 5] },
+        { cat: "信息真伪", q: "看朋友朋友圈发了张极具氛围感的自拍，你的第一反应：", a: ["点个赞，好看就行", "习惯性放大找液化或AI痕迹", "觉得这种精致很虚假，全是算法"], p: [0, 2, 5] },
+        { cat: "信息真伪", q: "发现AI翻唱你偶像的歌，甚至比原唱更有感染力：", a: ["加入歌单循环播放", "觉得没灵魂，听着别扭", "觉得艺术已死，情感被亵渎了"], p: [0, 2, 5] },
+        { cat: "信息真伪", q: "手机输入法还没打字就能精准预测你想说的整句话：", a: ["太爽了，简直是我的嘴替", "有窥探感，偶尔故意乱打字干扰它", "恐惧自己正在丧失组织语言能力"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "发现入职新人利用AI，半天干完了你三天的活：", a: ["赶紧请教，大家一起早下班", "表面淡定，心里担心资历贬值", "感到羞辱，觉得多年经验无意义"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "公司要求：以后所有基础报告必须先过一遍AI：", a: ["太好了，摆脱琐事了", "感觉成了AI修图师，工作变味了", "觉得变相裁员，开始更新简历"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "看到“某职业已被AI彻底取代”的实时热搜：", a: ["看热闹，反正我不可替代", "赶紧确认自己岗位排在第几", "焦虑手抖，觉得末日提前到了"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "领导要求大家学会像机器一样精准、标准地思考：", a: ["赞同，理性工作感性生活", "听着不舒服，觉得自己是零件", "愤怒，觉得人性光辉消失了"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "面试官问：“如果不准用AI，你的竞争力在哪里？”：", a: ["自信展示我的决策和同理心", "发现自己确实太依赖AI了", "觉得这是个冒犯的问题"], p: [0, 2, 5] },
+        { cat: "职场竞争", q: "辛辛苦苦写的方案被评价为“充满机器感，没灵性”：", a: ["修正表达，加点幽默感", "委屈，不知道怎么才算有人味", "崩溃，感觉自己快被同化了"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "购物软件精准推算出你刚动心但没搜过的商品：", a: ["懂我！直接下单", "它在偷听？关掉麦克风权限", "感到被全方位监视，想扔手机"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "导航让你走一条从未见过的偏僻小路避开拥堵：", a: ["无条件相信算法", "犹豫再三，边开边怀疑", "坚决不走，我的路必须我选"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "手机自动生成你过去一年的“温情回忆视频”：", a: ["挺感动，发朋友圈纪念", "隐私被翻了个底朝天，不适", "觉得机器在廉价化我的情感"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "餐厅扫码点餐，AI根据历史自动推荐了菜品：", a: ["行，就按它说的来", "偏不点推荐的，自己翻菜单", "觉得这种“被喂食”感很恶心"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "去医院挂号，发现初筛病因的是AI终端而非医生：", a: ["好事，减少排队客观分析", "存疑，见到医生非要再问一遍", "觉得生命交给概率很荒谬"], p: [0, 2, 5] },
+        { cat: "生活决策", q: "智能音箱在深夜突然莫名其妙应答：", a: ["程序Bug，明天重启", "背后发凉，赶紧拔电源", "觉得房子里住着电子幽灵"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "发现聊得很投缘的网友，其实正在使用AI代聊：", a: ["聊得开心就行，管它是谁", "有种被愚弄感，立刻拉黑", "觉得人类沟通已彻底破产"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "收到朋友发来的AI撰写的长文节日祝福：", a: ["挺有创意，我也回一个", "觉得对方敷衍，还不如不发", "感到虚假社交让人疲惫"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "玩网游时怀疑队友和对手都是高仿真机器人：", a: ["挺好，匹配速度快", "没意思，人与人的竞技才好玩", "感到被电子包围的窒息感"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "遇到生活琐事（如修水龙头）第一时间只问AI：", a: ["效率至上，AI最客观", "意识到很久没找朋友聊了，孤独", "意识到离开了算法就无法生存"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "发现自己习惯向AI倾诉秘密，超过了向真人倾诉：", a: ["挺好，情绪价值拉满", "内疚，觉得对不起真人朋友", "意识到自己在丧失对人类的信任"], p: [0, 2, 5] },
+        { cat: "社交情感", q: "离开AI辅助后，发现自己连一段告白信都写不出：", a: ["正常，大脑腾出空间做别的", "羞愧，关掉AI试着自己憋词", "惊恐地意识到，灵魂已被格式化"], p: [0, 2, 5] }
+    ];
+
+    let currentIdx = 0, totalScore = 0;
+
+    function startTest() {
+        document.getElementById('start-page').classList.add('hidden');
+        document.getElementById('quiz-page').classList.remove('hidden');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = questions[currentIdx];
+        const quizContent = document.getElementById('quiz-content');
+        quizContent.classList.remove('fade');
+        void quizContent.offsetWidth; // 触发重绘
+        quizContent.classList.add('fade');
+
+        document.getElementById('question-category').innerText = `SECT: ${q.cat} - ${currentIdx + 1}/24`;
+        document.getElementById('question-text').innerText = q.q;
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        q.a.forEach((text, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = text;
+            btn.onclick = () => nextQuestion(q.p[i]);
+            container.appendChild(btn);
+        });
+        document.getElementById('progress-bar').style.width = `${(currentIdx / 24) * 100}%`;
+    }
+
+    function nextQuestion(score) {
+        totalScore += score;
+        if (++currentIdx < questions.length) showQuestion(); else showResult();
+    }
+
+    function showResult() {
+        document.getElementById('quiz-page').classList.add('hidden');
+        document.getElementById('result-page').classList.remove('hidden');
+        
+        const percent = Math.round((totalScore / 120) * 100);
+        const scoreEl = document.getElementById('score-num');
+        
+        // 核心逻辑：颜色渐变计算 (HSL: 120是绿色, 0是红色)
+        const hue = 120 - (percent * 1.2); 
+        scoreEl.style.color = `hsl(${hue}, 80%, 50%)`;
+        scoreEl.style.textShadow = `0 0 20px hsl(${hue}, 80%, 30%)`;
+        
+        // 分数动画
+        let count = 0;
+        const timer = setInterval(() => {
+            if (count >= percent) clearInterval(timer);
+            scoreEl.innerText = count + "%";
+            count++;
+        }, 20);
+
+        let level = "", desc = "";
+        if (percent <= 20) { level = "心如止水"; desc = "你是AI时代的“弄潮儿”。在别人担心被取代时，你已经把AI当成了外挂大脑。你掌握着绝对的主动权。"; }
+        else if (percent <= 45) { level = "顺其自然"; desc = "你是个实用的中间派。你享受便利，但当AI表现得太像人时，你会保持警惕。你的心理防线依然稳固。"; }
+        else if (percent <= 70) { level = "眉头发紧"; desc = "焦虑感正在蔓延。你发现算法正逐渐包围你的决策，你在“便利”与“掌控感”之间痛苦挣扎。建议少看科技新闻。"; }
+        else if (percent <= 90) { level = "汗流浃背"; desc = "警报拉响！你对AI的进化产生了强烈的生理性焦虑。你开始怀疑周围一切的真实性，甚至怀疑自己是否正在被同化。"; }
+        else { level = "原地起飞"; desc = "焦虑爆表！你几乎丧失了对算法时代的信任。建议立即断网48小时，去山里抱抱大树，找回作为‘人类’的触感。"; }
+
+        document.getElementById('res-level').innerText = level;
+        document.getElementById('res-level').style.color = `hsl(${hue}, 80%, 50%)`;
+        document.getElementById('res-desc').innerText = desc;
+    }
+</script>
+</body>
+</html>
